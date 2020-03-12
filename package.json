@@ -1,16 +1,15 @@
 {
   "name": "herobuilds-api",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "HeroBuilds API",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/teddyhn/herobuilds-api.git"
   },
-  "author": "",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/teddyhn/herobuilds-api/issues"
@@ -20,5 +19,8 @@
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "puppeteer": "^2.1.1"
+  },
+  "engines": {
+    "node": "10.x"
   }
 }
