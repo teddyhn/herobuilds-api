@@ -6,10 +6,9 @@ const app = express();
 
 const URL = process.env.URL
 
-const hostname = '127.0.0.1';
-const port = 3000;
+const port = process.env.PORT || 5000;
 
-app.listen(port, hostname, () => console.log('Server live 👌'))
+app.listen(port, () => console.log('Server live 👌'))
 
 app.get("/", (req, res) => {
     res.send('HeroBuilds API is online! 🌊')
@@ -51,6 +50,7 @@ app.get("/api/heroes", async (req, res) => {
                     hero.pickrate = el.querySelector('td:nth-child(5)').textContent
                     hero.banrate = el.querySelector('td:nth-child(6)').textContent
                     hero.gamesPlayed = el.querySelector('td:nth-child(8)').textContent
+                    hero.img = el.querySelector('.hero-picture img').getAttribute('src').slice(24)
 
                     // Save stats in object
                     resObj.heroes.push(hero)
@@ -72,6 +72,103 @@ app.get("/api/heroes", async (req, res) => {
         db.saveToDB("heroes", "", data)
 
     } else {
+      res.send(lastData)
+    }
+})
+
+app.get("/api/heroes/:name", async (req, res) => {
+  
+    // NOTE: Hero names need to be properly capitalized/spelled/punctuated! e.g. "Lúcio" not "lucio"
+    const heroName = req.params.name
+    
+    let lastData = await db.fetchFromDB(heroName, "heroes/")
+    // If the last update is more than 12h old, update the file
+    if (lastData == null || Date.now() - lastData.lastUpdate > 1000*60*60*12) {
+  
+      var browser = await puppeteer.launch({ headless: true })
+      var page = await browser.newPage();
+      await page.goto(
+        URL + process.env.URL_HERO + heroName,
+        { waitUntil: 'networkidle0' }
+      );
+  
+      let data = {}
+  
+      const getData = async() => {
+        return await page.evaluate(async () => {
+          let resObj = {
+            lastUpdate: Date.now(),
+            talents: [],
+            builds: []
+          }
+
+          tables = document.querySelectorAll('table.single-talent-table')
+    
+          tables.forEach(el => {
+            let tierArr = []
+            talents = document.querySelectorAll(`#${el.id} > tbody tr`)
+            talents.forEach(el => {
+              let talent = {}
+    
+              talent.name = el.querySelector('.talent-name').textContent
+              talent.description = el.querySelector('.talent-description').textContent
+              talent.keybinding = el.querySelector('.talent-keybinding').textContent
+              talent.winrate = el.querySelector('.win_rate_cell').textContent
+              talent.popularity = el.querySelector('.popularity_cell').textContent
+              talent.gamesPlayed = el.querySelector('.games_played_cell').textContent
+              talent.wins = el.querySelector('.wins_cell').textContent
+              talent.losses = el.querySelector('.losses_cell').textContent
+              talent.img = el.querySelector('.talent-image img').getAttribute('src').slice(25)
+  
+              tierArr.push(talent)
+            })
+    
+            resObj.talents.push(tierArr)
+          })
+
+          builds = document.querySelectorAll('table#popularbuilds tbody tr')
+
+          builds.forEach(el => {
+            let build = {}
+
+            build.talents = []
+
+            talents = el.querySelectorAll('div.talent-name')
+
+            talents.forEach(el => {
+              build.talents.push(el.textContent)
+            })
+
+            build.gamesPlayed = el.querySelector('.games_played_column').textContent
+            build.wins = el.querySelector('td:nth-of-type(3)').textContent
+            build.losses = el.querySelector('td:nth-of-type(4)').textContent
+            build.winrate = el.querySelector('td:nth-of-type(5)').textContent
+
+            resObj.builds.push(build)
+          })
+  
+          return new Promise(resolve => {
+            resolve(resObj);
+          })
+        })
+      }
+  
+      data = await getData();
+
+      await browser.close();
+  
+      // If no data is recorded, error out
+      if (data.talents[0].length == 0) {
+        res.status(404).send("We couldn't find any data! 😂👌")
+      } else {
+        // Return the data in plain JSON
+        res.send(JSON.stringify(data))
+        // and save a copy to db
+        db.saveToDB(heroName, "heroes/", data)
+      }
+  
+    } else {
+      // Send cached data
       res.send(lastData)
     }
 })
