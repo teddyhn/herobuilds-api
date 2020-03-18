@@ -85,7 +85,7 @@ app.get("/api/heroes/:name", async (req, res) => {
     // If the last update is more than 12h old, update the file
     if (lastData == null || Date.now() - lastData.lastUpdate > 1000*60*60*12) {
   
-      var browser = await puppeteer.launch({ headless: true })
+      var browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
       var page = await browser.newPage();
       await page.goto(
         URL + process.env.URL_HERO + heroName,
