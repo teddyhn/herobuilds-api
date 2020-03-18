@@ -22,7 +22,7 @@ app.get("/api/heroes", async (req, res) => {
     if (lastData == null || Date.now() - lastData.lastUpdate > 1000*60*60*12) {
   
         // Scrape from site that attempts to profit off data not owned by them by charging for API access
-        var browser = await puppeteer.launch({ headless: true })
+        var browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
         var page = await browser.newPage();
         await page.goto(
             URL + "Global/Hero/",
