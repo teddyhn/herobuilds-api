@@ -1,7 +1,7 @@
 const fs = require('fs')
 
 // Where to save .txt database (more of a cache)
-const PATH = '.data/database/'
+const PATH = `${__dirname}/.data/database/`
 
 // Promise-ified readFile, writeFile
 const readFile = (path, opts = 'utf8') =>
