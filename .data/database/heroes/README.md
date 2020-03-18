@@ -1,0 +1,1 @@
+This directory will hold the .txt files that database.js writes to.
