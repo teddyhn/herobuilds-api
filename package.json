@@ -16,6 +16,7 @@
   },
   "homepage": "https://github.com/teddyhn/herobuilds-api#readme",
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "puppeteer": "^2.1.1"
