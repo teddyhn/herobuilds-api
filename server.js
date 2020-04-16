@@ -14,9 +14,75 @@ app.get("/", (req, res) => {
     res.send('HeroBuilds API is online! 🌊')
 })
 
-app.get("/api/heroes", async (req, res) => {
+app.get("/api/heroes/", async (req, res) => {
 
-    let lastData = await db.fetchFromDB("heroes", "");
+  let lastData = await db.fetchFromDB("heroes", "");
+  
+  // If the last update is more than 12h old, update the file
+  if (lastData == null || Date.now() - lastData.lastUpdate > 1000*60*60*12) {
+
+      // Scrape from site that attempts to profit off data not owned by them by charging for API access
+      var browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
+      var page = await browser.newPage();
+
+      await page.goto(
+          URL + "Global/Hero/",
+          { waitUntil: 'networkidle0' }
+      );
+
+      let data = {}
+
+      const getData = async() => {
+          return await page.evaluate(async () => {
+              let resObj = {
+                  lastUpdate: Date.now(),
+                  heroes: []
+              }
+
+              heroes = document.querySelectorAll('tbody#hero-stat-data > tr:nth-of-type(odd)')
+      
+              heroes.forEach(el => {
+                  let hero = {}
+
+                  hero.name = el.querySelector('td:nth-child(1) a.vertically-aligned').textContent
+                  hero.winrate = el.querySelector('td:nth-child(2)').textContent
+                  hero.deltaWinrate = el.querySelector('td:nth-child(3)').textContent
+                  hero.popularity = el.querySelector('td:nth-child(4)').textContent
+                  hero.pickrate = el.querySelector('td:nth-child(5)').textContent
+                  hero.banrate = el.querySelector('td:nth-child(6)').textContent
+                  hero.gamesPlayed = el.querySelector('td:nth-child(8)').textContent
+                  hero.img = el.querySelector('.hero-picture img').getAttribute('src').slice(24)
+
+                  // Save stats in object
+                  resObj.heroes.push(hero)
+              })
+
+              return new Promise(resolve => {
+                  resolve(resObj);
+              })
+          })
+      }
+
+      data = await getData();
+
+      await browser.close();
+
+      // Return the data in plain JSON
+      res.send(JSON.stringify(data))
+      // and save a copy to db
+      db.saveToDB("heroes", "", data)
+
+  } else {
+    res.send(lastData)
+  }
+})
+
+app.get("/api/heroes/:role", async (req, res) => {
+
+    let role;
+    req.params.role ? role = req.params.role : role = "";
+
+    let lastData = await db.fetchFromDB(role, "");
     
     // If the last update is more than 12h old, update the file
     if (lastData == null || Date.now() - lastData.lastUpdate > 1000*60*60*12) {
@@ -24,8 +90,9 @@ app.get("/api/heroes", async (req, res) => {
         // Scrape from site that attempts to profit off data not owned by them by charging for API access
         var browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
         var page = await browser.newPage();
+
         await page.goto(
-            URL + "Global/Hero/",
+            URL + "Global/Hero/" + `?role=${role}`,
             { waitUntil: 'networkidle0' }
         );
 
@@ -66,17 +133,22 @@ app.get("/api/heroes", async (req, res) => {
 
         await browser.close();
 
-        // Return the data in plain JSON
-        res.send(JSON.stringify(data))
-        // and save a copy to db
-        db.saveToDB("heroes", "", data)
+        // If no data is recorded, error out
+        if (data.heroes.length == 0) {
+          res.status(404).send("We couldn't find any data! 😂👌")
+        } else {
+          // Return the data in plain JSON
+          res.send(JSON.stringify(data))
+          // and save a copy to db
+          db.saveToDB(role, "", data)
+        }
 
     } else {
       res.send(lastData)
     }
 })
 
-app.get("/api/heroes/:name", async (req, res) => {
+app.get("/api/hero/:name", async (req, res) => {
   
     // NOTE: Hero names need to be properly capitalized/spelled/punctuated! e.g. "Lúcio" not "lucio"
     const heroName = req.params.name
