@@ -3,10 +3,13 @@ const puppeteer = require('puppeteer')
 const express = require('express')
 const db = require('./database')
 const app = express();
+const cors = require('cors')
 
 const URL = process.env.URL
 
 const port = process.env.PORT || 5000;
+
+app.use(cors())
 
 app.listen(port, () => console.log('Server live 👌'))
 
