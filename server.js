@@ -214,10 +214,11 @@ app.get("/api/hero/:name", async (req, res) => {
               build.talents.push(el.textContent)
             })
 
+            build.code = el.querySelector('.build-code').textContent
             build.gamesPlayed = el.querySelector('.games_played_column').textContent
-            build.wins = el.querySelector('td:nth-of-type(3)').textContent
-            build.losses = el.querySelector('td:nth-of-type(4)').textContent
-            build.winrate = el.querySelector('td:nth-of-type(5)').textContent
+            build.wins = el.querySelector('td:nth-of-type(4)').textContent
+            build.losses = el.querySelector('td:nth-of-type(5)').textContent
+            build.winrate = el.querySelector('td:nth-of-type(6)').textContent
 
             resObj.builds.push(build)
           })
