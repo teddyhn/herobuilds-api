@@ -252,8 +252,7 @@ app.get("/api/hero/:name", async (req, res) => {
 
 // schedule tasks to be run on the server
 cron.schedule("0 0 */3 * * *", async () => {
-  console.log("running a task every minute");
-
+  console.log('Running task scheduled for every 3 hours.')
   let heroes = require('./Heroes.json');
 
   for (let i = 0; i < heroes.length; i++) {
