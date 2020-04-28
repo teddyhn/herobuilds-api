@@ -2,6 +2,7 @@ require('dotenv').config();
 const puppeteer = require('puppeteer')
 const express = require('express')
 const db = require('./database')
+const cron = require('node-cron')
 const app = express();
 const cors = require('cors')
 
@@ -248,4 +249,99 @@ app.get("/api/hero/:name", async (req, res) => {
       res.send(lastData)
     }
 })
+
+// schedule tasks to be run on the server
+cron.schedule("0 0 */3 * * *", async () => {
+  console.log("running a task every minute");
+
+  let heroes = require('./Heroes.json');
+
+  for (let i = 0; i < heroes.length; i++) {
+    const heroName = heroes[i].PrimaryName
+    await cacheHeroData(heroName)
+  }
+});
   
+
+const cacheHeroData = async (heroName) => {
+  let lastData = await db.fetchFromDB(heroName, "heroes/")
+    // If the last update is more than 2h old, update the file
+    if (lastData == null || Date.now() - lastData.lastUpdate > 1000*60*60*2) {
+  
+      var browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
+      var page = await browser.newPage();
+      await page.goto(
+        URL + process.env.URL_HERO + heroName,
+        { waitUntil: 'networkidle0' }
+      );
+  
+      let data = {}
+  
+      const getData = async() => {
+        return await page.evaluate(async () => {
+          let resObj = {
+            lastUpdate: Date.now(),
+            talents: [],
+            builds: []
+          }
+
+          tables = document.querySelectorAll('table.single-talent-table')
+    
+          tables.forEach(el => {
+            let tierArr = []
+            talents = document.querySelectorAll(`#${el.id} > tbody tr`)
+            talents.forEach(el => {
+              let talent = {}
+    
+              talent.name = el.querySelector('.talent-name').textContent
+              talent.description = el.querySelector('.talent-description').textContent
+              talent.keybinding = el.querySelector('.talent-keybinding').textContent
+              talent.winrate = el.querySelector('.win_rate_cell').textContent
+              talent.popularity = el.querySelector('.popularity_cell').textContent
+              talent.gamesPlayed = el.querySelector('.games_played_cell').textContent
+              talent.wins = el.querySelector('.wins_cell').textContent
+              talent.losses = el.querySelector('.losses_cell').textContent
+              talent.img = el.querySelector('.talent-image img').getAttribute('src').slice(25)
+  
+              tierArr.push(talent)
+            })
+    
+            resObj.talents.push(tierArr)
+          })
+
+          builds = document.querySelectorAll('table#popularbuilds tbody tr')
+
+          builds.forEach(el => {
+            let build = {}
+
+            build.talents = []
+
+            talents = el.querySelectorAll('div.talent-name')
+
+            talents.forEach(el => {
+              build.talents.push(el.textContent)
+            })
+
+            build.code = el.querySelector('.build-code').textContent
+            build.gamesPlayed = el.querySelector('.games_played_column').textContent
+            build.wins = el.querySelector('td:nth-of-type(4)').textContent
+            build.losses = el.querySelector('td:nth-of-type(5)').textContent
+            build.winrate = el.querySelector('td:nth-of-type(6)').textContent
+
+            resObj.builds.push(build)
+          })
+  
+          return new Promise(resolve => {
+            resolve(resObj);
+          })
+        })
+      }
+  
+      data = await getData();
+
+      await browser.close();
+      
+      db.saveToDB(heroName, "heroes/", data)
+  
+    } else console.log("Hero data already cached.")
+  }
