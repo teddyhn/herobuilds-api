@@ -265,8 +265,8 @@ cron.schedule("0 0 */3 * * *", async () => {
 
 const cacheHeroData = async (heroName) => {
   let lastData = await db.fetchFromDB(heroName, "heroes/")
-    // If the last update is more than 12h old, update the file
-    if (lastData == null || Date.now() - lastData.lastUpdate > 1000*60*60*12) {
+    // If the last update is more than 2h old, update the file
+    if (lastData == null || Date.now() - lastData.lastUpdate > 1000*60*60*2) {
   
       var browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
       var page = await browser.newPage();
