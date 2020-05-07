@@ -12,7 +12,15 @@ const port = process.env.PORT || 5000;
 
 app.use(cors())
 
-app.listen(port, () => console.log('Server live 👌'))
+app.listen(port, () => {
+  console.log('Running server startup task.')
+  let heroes = require('./Heroes.json');
+
+  for (let i = 0; i < heroes.length; i++) {
+    const heroName = heroes[i].PrimaryName
+    await cacheHeroData(heroName)
+  }
+})
 
 app.get("/", (req, res) => {
     res.send('HeroBuilds API is online! 🌊')
