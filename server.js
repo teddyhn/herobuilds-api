@@ -12,7 +12,7 @@ const port = process.env.PORT || 5000;
 
 app.use(cors())
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log('Running server startup task.')
   let heroes = require('./Heroes.json');
 
